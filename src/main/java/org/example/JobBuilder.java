@@ -5,19 +5,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Partitioner;
-import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 
 import java.io.IOException;
 import java.net.URI;
 
 public class JobBuilder{
-    private static boolean combinerGotSetFlag;
     private static Job job;
 
     private JobBuilder() {
@@ -25,7 +22,6 @@ public class JobBuilder{
     }
 
     public static JobBuilder builder() throws IOException {
-        combinerGotSetFlag = false;
         Configuration configuration = new Configuration();
 
         job = Job.getInstance(configuration);
@@ -65,15 +61,11 @@ public class JobBuilder{
 
     public JobBuilder reducerClass(Class<? extends Reducer> reducerClass) {
         job.setReducerClass(reducerClass);
-        if(combinerGotSetFlag)
-            return this;
-        job.setCombinerClass(reducerClass);
         return this;
     }
 
     public JobBuilder combinerClass(Class<? extends Reducer> reducerClass) {
         job.setCombinerClass(reducerClass);
-        combinerGotSetFlag = true;
         return this;
     }
 
@@ -82,13 +74,34 @@ public class JobBuilder{
         return this;
     }
 
-    public JobBuilder mapOutputKeyClass(Class<? extends Writeable> mapOutputKeyClass) {
-        job.setMapOutputKeyClass(mapOutputKeyClass);
-        return this;
-    }
-
     public JobBuilder cacheFile(URI file){
         job.addCacheFile(file);
         return this;
     }
+
+    public JobBuilder mapOutputKeyClass(Class<?> mapOutputKeyClass) {
+        job.setMapOutputKeyClass(mapOutputKeyClass);
+        return this;
+    }
+
+    public JobBuilder mapOutputValueClass(Class<?> mapOutputValueClass){
+        job.setMapOutputValueClass(mapOutputValueClass);
+        return this;
+    }
+
+    public JobBuilder outputKeyClass(Class<?> outputKeyClass){
+        job.setOutputKeyClass(outputKeyClass);
+        return this;
+    }
+
+    public JobBuilder outputValueClass(Class<?> outputValueClass){
+        job.setOutputValueClass(outputValueClass);
+        return this;
+    }
+
+    public JobBuilder setOutputFormatClass(Class<? extends OutputFormat> outputFormat){
+        job.setOutputFormatClass(outputFormat);
+        return this;
+    }
+
 }

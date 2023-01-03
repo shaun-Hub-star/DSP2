@@ -1,13 +1,8 @@
 package org.example;
 
-import jdk.jfr.internal.tool.Main;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 import java.io.IOException;
 import java.net.URI;
@@ -28,6 +23,12 @@ public class MainJobs {
         if (!Nr.waitForCompletion(true)) {
             System.exit(1);
         }
+        Job CombinedWordCount = combinedWordCount(args[1] + "/part-r-00000", "Output3");
+        if (!CombinedWordCount.waitForCompletion(true)) {
+            System.exit(1);
+        }
+        Job Tr = TrJob("Output3/part-r-00000", "Output4");
+        System.exit(Tr.waitForCompletion(true) ? 0 : 1);
 
     }
 
@@ -38,6 +39,7 @@ public class MainJobs {
                 .mapperClass(WordCount.MapperClass.class)
                 .partitionerClass(WordCount.PartitionerClass.class)
                 .reducerClass(WordCount.ReducerClass.class)
+                .combinerClass(WordCount.ReducerClass.class)
                 .inputPath(inputPath)
                 .outputPath(outputPath)
                 .cacheFile(new URI(stopWordsPath))
@@ -46,16 +48,43 @@ public class MainJobs {
 
     private static Job NrJob(String inputPath, String outputPath) throws IOException {
         return JobBuilder.builder()
-                .jarByClass(Nr.class) //TODO!!!!!!!!!
+                .jarByClass(Nr.class)
                 .jobName("Nr")
                 .mapperClass(Nr.MapperClass.class)
                 .partitionerClass(Nr.PartitionerClass.class)
                 .reducerClass(Nr.ReducerClass.class)
+                .combinerClass(Nr.ReducerClass.class)
                 .inputPath(inputPath)
                 .outputPath(outputPath)
                 .build();
     }
 
+    private static Job combinedWordCount(String inputPath, String outputPath) throws IOException {
+        return JobBuilder.builder()
+                .jarByClass(CombinedWordCount.class) //TODO!!!!!!!!!
+                .jobName("Combine words ")
+                .mapperClass(CombinedWordCount.MapperClass.class)
+                .partitionerClass(CombinedWordCount.PartitionerClass.class)
+                .reducerClass(CombinedWordCount.ReducerClass.class)
+                .mapOutputValueClass(Text.class)
+                .outputValueClass(Text.class)
+                .inputPath(inputPath)
+                .outputPath(outputPath)
+                .setOutputFormatClass(TextOutputFormat.class)
+                .build();
+    }
+    private static Job TrJob(String inputPath, String outputPath) throws IOException {
+        return JobBuilder.builder()
+                .jarByClass(Tr.class)
+                .jobName("Nr")
+                .mapperClass(Tr.MapperClass.class)
+                .partitionerClass(Tr.PartitionerClass.class)
+                .reducerClass(Tr.ReducerClass.class)
+                .combinerClass(Tr.ReducerClass.class)
+                .inputPath(inputPath)
+                .outputPath(outputPath)
+                .build();
+    }
 
 
 }

@@ -1,53 +1,50 @@
 package org.example;
 
-public class CombinedWordCount {
-    public static class MapperClass extends Mapper<LongWritable, Text, Text, LongWritable> {
-        private final static LongWritable one = new LongWritable(1L);
-        //private final static Text word = new Text();
-        HashSet<String> stopWords;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Partitioner;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.example.TextOutputs.WordCountOutput;
 
-        @Override
-        protected void setup(Context context) throws IOException, InterruptedException {
-            stopWords = new HashSet<>();
-            try (BufferedReader reader = new BufferedReader(new FileReader(String.valueOf(context.getCacheFiles()[0])))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    stopWords.add(line.toLowerCase());
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        //jar input[s3://ngrams/eng-all/data] output
+import java.io.IOException;
+
+public class CombinedWordCount {
+    public static class MapperClass extends Mapper<LongWritable, Text, Text, Text> {
 
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-            PartedText word = new PartedText(key, value);
-            if(word.getNumOfWords() != 3 || word.hasStopWord(stopWords) || word.hasIllegalCharacter())
-                return;
-
-            context.write(word.getText(), one);
+            WordCountOutput word = new WordCountOutput(value);
+            //<3gram>\t(<part> <count>)
+            context.write(word.getWords(), new Text(word.getPart() + " " + word.getCount()));
 
         }
 
 
     }
 
-    public static class ReducerClass extends Reducer<Text, LongWritable, Text, LongWritable> {
+    public static class ReducerClass extends Reducer<Text, Text, Text, Text> {
         @Override
-        public void reduce(Text key, Iterable<LongWritable> values, Context context) throws IOException, InterruptedException {
-            long sum = 0;
-            for (LongWritable value : values) {
-                sum += value.get();
+        public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+            long sum0 = 0;
+            long sum1 = 0;
+
+            for (Text value : values) {
+                String[] parts = value.toString().split("\\s");
+                int part = Integer.parseInt(parts[0]);
+                long count = Integer.parseInt(parts[1]);
+                if (part == 0)
+                    sum0 += count;
+                else
+                    sum1 += count;
             }
-            //System.out.println("The sum is:" + sum);
-            context.write(key, new LongWritable(sum));
+            context.write(key, new Text("" + sum0 + "\t" + sum1));
         }
     }
 
-    public static class PartitionerClass extends Partitioner<Text, LongWritable> {
+    public static class PartitionerClass extends Partitioner<Text, Text> {
         @Override
-        public int getPartition(Text key, LongWritable value, int numPartitions) {
+        public int getPartition(Text key, Text value, int numPartitions) {
             return (key.hashCode() & Integer.MAX_VALUE) % numPartitions;
         }
     }
