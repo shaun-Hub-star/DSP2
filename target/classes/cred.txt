@@ -1,0 +1,3 @@
+[default]
+accessKey=ASIATFAT2J2GVMRVHOO7
+secretKey=kFE7LUaJQDNN7/AwNlhMzmWmggQdDeRmSjMlNDau
