@@ -2,6 +2,7 @@ package org.example.TextOutputs;
 
 import org.apache.hadoop.io.Text;
 
+@Deprecated
 public class WordCountOutput {
 
     private final long part;

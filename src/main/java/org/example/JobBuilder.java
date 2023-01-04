@@ -1,14 +1,13 @@
 package org.example;
 
-import com.sun.corba.se.spi.ior.Writeable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 
 import java.io.IOException;
@@ -16,19 +15,19 @@ import java.net.URI;
 
 public class JobBuilder{
     private static Job job;
-
+    private static Configuration configuration;
     private JobBuilder() {
 
     }
 
     public static JobBuilder builder() throws IOException {
-        Configuration configuration = new Configuration();
+        configuration = new Configuration();
 
         job = Job.getInstance(configuration);
         job.setMapOutputKeyClass(Text.class);
-        job.setMapOutputValueClass(LongWritable.class);
+        job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(LongWritable.class);
+        job.setOutputValueClass(Text.class);
         return new JobBuilder();
     }
     public Job build() {
@@ -99,8 +98,18 @@ public class JobBuilder{
         return this;
     }
 
-    public JobBuilder setOutputFormatClass(Class<? extends OutputFormat> outputFormat){
+    public JobBuilder outputFormatClass(Class<? extends OutputFormat> outputFormat){
         job.setOutputFormatClass(outputFormat);
+        return this;
+    }
+
+    public JobBuilder addInputPath(String inputPath, Class<? extends Mapper> mapperClass){
+        MultipleInputs.addInputPath(job, new Path(inputPath), TextInputFormat.class, mapperClass);
+        return this;
+    }
+
+    public JobBuilder setVariable(double N){
+        configuration.setDouble("N", N);
         return this;
     }
 

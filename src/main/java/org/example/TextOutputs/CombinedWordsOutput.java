@@ -9,6 +9,8 @@ public class CombinedWordsOutput {
     private final Text words;
 
     public CombinedWordsOutput(Text line) {
+        //<3gram>\t<count0>\t<count1>
+        
         String[] parts = line.toString().split("\\t");
         words = new Text(parts[0]);
         count0 = Integer.parseInt(parts[1]);

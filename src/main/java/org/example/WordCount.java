@@ -5,9 +5,7 @@ import java.io.FileReader;
 import java.io.IOException;
 
 
-import java.net.URI;
 import java.util.HashSet;
-
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -15,15 +13,12 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
-
 import org.example.TextOutputs.PartedText;
 
 
 public class WordCount {
 
     public static class MapperClass extends Mapper<LongWritable, Text, Text, LongWritable> {
-        private final static LongWritable one = new LongWritable(1L);
-        //private final static Text word = new Text();
         HashSet<String> stopWords;
 
         @Override
@@ -38,30 +33,44 @@ public class WordCount {
                 e.printStackTrace();
             }
         }
-        //jar input[s3://ngrams/eng-all/data] output
 
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             PartedText word = new PartedText(key, value);
-            if (word.getNumOfWords() != 3 || word.hasStopWord(stopWords) || word.hasIllegalCharacter())
+            if(word.getNumOfWords() != 3 || word.hasStopWord(stopWords) || word.hasIllegalCharacter())
                 return;
 
-            context.write(word.getText(), one);
-
+            //emit <3gram>, <part>
+            context.write(word.getText(), new LongWritable(word.getPart()));
         }
-
-
     }
 
-    public static class ReducerClass extends Reducer<Text, LongWritable, Text, LongWritable> {
+    public static class ReducerClass extends Reducer<Text, Text, Text, Text> {
+        @Override
+        public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+            long sum0 = 0;
+            long sum1 = 0;
+            for (Text value : values) {
+                String[] sums = value.toString().split("\\s");
+                sum0 += Integer.parseInt(sums[0]);
+                sum1 += Integer.parseInt(sums[1]);
+            }
+            context.write(key, new Text(sum0 + "\t" + sum1));
+        }
+    }
+
+    public static class CombinerClass extends Reducer<Text, LongWritable, Text, Text>{
         @Override
         public void reduce(Text key, Iterable<LongWritable> values, Context context) throws IOException, InterruptedException {
-            long sum = 0;
+            long sum0 = 0;
+            long sum1 = 0;
             for (LongWritable value : values) {
-                sum += value.get();
+                if(value.get() == 0)
+                    sum0++;
+                else
+                    sum1++;
             }
-            //System.out.println("The sum is:" + sum);
-            context.write(key, new LongWritable(sum));
+            context.write(key, new Text(sum0 + "\t" + sum1));
         }
     }
 
